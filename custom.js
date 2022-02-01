@@ -2,14 +2,23 @@ const videoElement = document.getElementsByClassName('input_video')[0];
 const canvasElement = document.getElementsByClassName('output_canvas')[0];
 //const canvasElementOver = document.getElementsByClassName('output_canvas_over')[0];
 const canvasCtx = canvasElement.getContext('2d');
-let x, x_thumb, x_POINTER, x_middle, x_ring, x_pinky = null;
-let y, y_thumb, y_POINTER, y_middle, y_ring, y_pinky = null;
+let x, x_thumb,x_thumb_left, x_POINTER, x_middle, x_ring, x_pinky = null;
+let y, y_thumb,y_thumb_left, y_POINTER, y_middle, y_ring, y_pinky = null;
 //buffer
 let margin = 0.05;
+
+let RightHandIndex =0;
+let LeftHandIndex  =1;
+
 
 let last_x_thumb = 0;
 let thumb_play = 0;
 let previous_thumb_play,previous_POINTER_play,previous_middle_play = 0;
+
+
+let last_x_thumb_left = 0;
+let thumb_play_left = 0;
+let previous_thumb_play_left= 0;
 
 let last_x_POINTER = 0;
 let POINTER_play = 0;
@@ -32,7 +41,7 @@ const playNote = function (note) {
 
     note = Math.ceil(rangeWidth(note));
     midiOutput.send([NOTE_ON, note, 0x7f]);
-    midiOutput.send([0xB0,30,note]);
+    //midiOutput.send([0xB0,20,note]);
     //midiOutput.send([NOTE_OFF, notes, 0x7f], window.performance.now() + 1000.0);
     //midiOutput.send([CONTROL_CHANGE,thumbsPositionFilter,0x7f]);
 }
@@ -41,6 +50,16 @@ const playNoteOff = function (note) {
     note = Math.ceil(rangeWidth(note));
     midiOutput.send([NOTE_OFF, note, 0x7f], window.performance.now() + 1000.0);
 
+}
+
+const playCC = function (position) {
+
+
+    position = Math.ceil(rangeWidth(position));
+
+    midiOutput.send([0xB0,20,position]);
+    //midiOutput.send([NOTE_OFF, notes, 0x7f], window.performance.now() + 1000.0);
+    //midiOutput.send([CONTROL_CHANGE,thumbsPositionFilter,0x7f]);
 }
 
 navigator.requestMIDIAccess()
@@ -79,15 +98,15 @@ function drawPointer(x, y) {
 
 function onResults(results) {
     //setTimeout(console.log('paue'),400000);
-    sleep(500);
+    //sleep(500);
 
-    if(results.multiHandLandmarks.length === 0)
-   {
-      // console.log('no hands');
-       playNoteOff(previous_thumb_play);
-       playNoteOff(previous_middle_play);
-       playNoteOff(previous_POINTER_play);
-   }
+    if (results.multiHandLandmarks.length === 0) {
+        // console.log('no hands');
+        playNoteOff(previous_thumb_play);
+        playNoteOff(previous_middle_play);
+        playNoteOff(previous_POINTER_play);
+        playNoteOff(previous_thumb_play_left);
+    }
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
@@ -96,84 +115,115 @@ function onResults(results) {
     if (results.multiHandLandmarks) {
         for (const landmarks of results.multiHandLandmarks) {
 
-            x_thumb = results.multiHandLandmarks[0][4].x;
-            y_thumb = results.multiHandLandmarks[0][4].y;
-
-            if ((x_thumb > (last_x_thumb + margin)) || (x_thumb < (last_x_thumb - margin)) || last_x_thumb === 0) {
-                last_x_thumb = x_thumb;
-
-                thumb_play = 1
+            RightHand(results.multiHandLandmarks);
+            if(results.multiHandLandmarks[1])
+            {
+                LeftHand(results.multiHandLandmarks);
             }
 
-            x_POINTER = results.multiHandLandmarks[0][8].x;
-            y_POINTER = results.multiHandLandmarks[0][8].y;
-
-
-            if ((x_POINTER > last_x_POINTER + margin) || (x_POINTER < last_x_POINTER - margin) || last_x_POINTER === 0) {
-                last_x_POINTER = x_POINTER;
-
-                POINTER_play = 1;
-
-            }
-
-            x_middle = results.multiHandLandmarks[0][12].x;
-            y_middle = results.multiHandLandmarks[0][12].y;
-
-
-            if ((x_middle > last_x_middle + margin) || (x_middle < last_x_middle - margin) || last_x_middle === 0) {
-                last_x_middle = x_middle;
-
-                middle_play = 1;
-
-            }
-
-            /**Play Chenged NOtes **/
-
-
-            if (thumb_play === 1) {
-                thumb_play = 0;
-
-                playNoteOff(previous_thumb_play);
-
-                previous_thumb_play = last_x_thumb;
-
-
-                playNote(last_x_thumb);
-            }
-            if (POINTER_play === 1) {
-
-                POINTER_play = 0;
-                playNoteOff(previous_POINTER_play);
-                previous_POINTER_play = last_x_POINTER;
-                playNote(last_x_POINTER);
-            }
-            if (middle_play === 1) {
-                previous_middle_play = last_x_middle;
-                playNoteOff(previous_middle_play);
-                middle_play = 0;
-                playNote(last_x_middle);
-            }
-
-            drawPointer(last_x_thumb * 1280, y_thumb * 720);
-            drawPointer(last_x_POINTER * 1280, y_POINTER * 720);
-            drawPointer(last_x_middle * 1280, y_middle * 720);
-
-            x_middle = results.multiHandLandmarks[0][12].x;
-            y_middle = results.multiHandLandmarks[0][12].y;
-
-
-            x_ring = results.multiHandLandmarks[0][16].x;
-            y_ring = results.multiHandLandmarks[0][16].y;
-
-            // setTimeout(function () {
-            //
-            //
-            // }, 300);
-            //drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 5 });
-            //drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 2 });
         }
+        canvasCtx.restore();
     }
-    canvasCtx.restore();
+}
+
+
+function RightHand(multiHandLandmarks)
+{
+
+    x_thumb = multiHandLandmarks[RightHandIndex][4].x;
+    y_thumb = multiHandLandmarks[RightHandIndex][4].y;
+
+    if ((x_thumb > (last_x_thumb + margin)) || (x_thumb < (last_x_thumb - margin)) || last_x_thumb === 0) {
+        last_x_thumb = x_thumb;
+
+        thumb_play = 1
+    }
+
+    x_POINTER = multiHandLandmarks[RightHandIndex][8].x;
+    y_POINTER = multiHandLandmarks[RightHandIndex][8].y;
+
+
+    if ((x_POINTER > last_x_POINTER + margin) || (x_POINTER < last_x_POINTER - margin) || last_x_POINTER === 0) {
+        last_x_POINTER = x_POINTER;
+
+        POINTER_play = 1;
+
+    }
+
+    x_middle = multiHandLandmarks[RightHandIndex][12].x;
+    y_middle = multiHandLandmarks[RightHandIndex][12].y;
+
+
+    if ((x_middle > last_x_middle + margin) || (x_middle < last_x_middle - margin) || last_x_middle === 0) {
+        last_x_middle = x_middle;
+
+        middle_play = 1;
+
+    }
+
+    /**Play Chenged NOtes **/
+
+
+    if (thumb_play === 1) {
+        thumb_play = 0;
+
+        playNoteOff(previous_thumb_play);
+
+        previous_thumb_play = last_x_thumb;
+
+
+        playNote(last_x_thumb);
+    }
+    if (POINTER_play === 1) {
+
+        POINTER_play = 0;
+        playNoteOff(previous_POINTER_play);
+        previous_POINTER_play = last_x_POINTER;
+        playNote(last_x_POINTER);
+    }
+    if (middle_play === 1) {
+        previous_middle_play = last_x_middle;
+        playNoteOff(previous_middle_play);
+        middle_play = 0;
+        playNote(last_x_middle);
+    }
+
+    drawPointer(last_x_thumb * 1280, y_thumb * 720);
+    drawPointer(last_x_POINTER * 1280, y_POINTER * 720);
+    drawPointer(last_x_middle * 1280, y_middle * 720);
+}
+
+function LeftHand(multiHandLandmarks)
+{
+
+    x_thumb_left = multiHandLandmarks[LeftHandIndex][4].x;
+    y_thumb_left = multiHandLandmarks[LeftHandIndex][4].y;
+
+    if ((x_thumb_left > (last_x_thumb_left + margin)) || (x_thumb_left < (last_x_thumb_left - margin)) || last_x_thumb_left === 0) {
+        last_x_thumb_left = x_thumb_left;
+
+        thumb_play_left = 1
+    }
+
+
+
+    /**Play Chenged NOtes **/
+
+
+    if (thumb_play_left === 1) {
+        thumb_play_left = 0;
+
+        playNoteOff(previous_thumb_play_left);
+
+        previous_thumb_play_left = last_x_thumb_left;
+
+
+        playNote(last_x_thumb_left);
+    }
+
+
+    drawPointer(last_x_thumb_left * 1280, y_thumb_left * 720);
+
 }
 
 const hands = new Hands({
