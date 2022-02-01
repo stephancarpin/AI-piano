@@ -30,14 +30,15 @@ const NOTE_DURATION = 300;
 const playNote = function (note) {
 
 
-    note = Math.ceil(range(note));
+    note = Math.ceil(rangeWidth(note));
     midiOutput.send([NOTE_ON, note, 0x7f]);
+    midiOutput.send([0xB0,30,note]);
     //midiOutput.send([NOTE_OFF, notes, 0x7f], window.performance.now() + 1000.0);
     //midiOutput.send([CONTROL_CHANGE,thumbsPositionFilter,0x7f]);
 }
 const playNoteOff = function (note) {
    //midiOutput.send([NOTE_ON, notes, 0x7f]);
-    note = Math.ceil(range(note));
+    note = Math.ceil(rangeWidth(note));
     midiOutput.send([NOTE_OFF, note, 0x7f], window.performance.now() + 1000.0);
 
 }
@@ -54,7 +55,7 @@ navigator.requestMIDIAccess()
     });
 
 
-function range(input) {
+function rangeWidth(input) {
 
     if ((input * 105.83) > 127) {
         return 127;
@@ -77,10 +78,10 @@ function drawPointer(x, y) {
 }
 
 function onResults(results) {
+    //setTimeout(console.log('paue'),400000);
+    sleep(500);
 
-
-
-   if(results.multiHandLandmarks.length === 0)
+    if(results.multiHandLandmarks.length === 0)
    {
       // console.log('no hands');
        playNoteOff(previous_thumb_play);
@@ -181,6 +182,7 @@ const hands = new Hands({
     }
 });
 hands.setOptions({
+    selfieMode: true,
     maxNumHands: 2,
     modelComplexity: 1,
     minDetectionConfidence: 0.5,
@@ -198,3 +200,12 @@ const camera = new Camera(videoElement, {
     height: 720
 });
 camera.start();
+
+
+function sleep(milliseconds) {
+    const date = Date.now();
+    let currentDate = null;
+    do {
+        currentDate = Date.now();
+    } while (currentDate - date < milliseconds);
+}
