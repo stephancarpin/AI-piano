@@ -2,16 +2,27 @@ const videoElement = document.getElementsByClassName('input_video')[0];
 const canvasElement = document.getElementsByClassName('output_canvas')[0];
 //const canvasElementOver = document.getElementsByClassName('output_canvas_over')[0];
 const canvasCtx = canvasElement.getContext('2d');
+
+
+
+
+
+
+
+
+
+
+
 let x, x_thumb,x_thumb_left, x_POINTER, x_middle, x_ring, x_pinky = null;
-let y, y_thumb,y_thumb_left, y_POINTER, y_middle, y_ring, y_pinky = null;
+let y,max_h, y_thumb,y_thumb_left, y_POINTER, y_middle, y_ring, y_pinky = null;
 //buffer
 let margin = 0.05;
 
 let RightHandIndex =0;
 let LeftHandIndex  =1;
 
-
-let last_x_thumb = 0;
+let velocity = 0;
+let last_x_thumb,last_y_thumb,played = 0;
 let thumb_play = 0;
 let previous_thumb_play,previous_POINTER_play,previous_middle_play = 0;
 
@@ -36,18 +47,20 @@ const CONTROL_CHANGE = 0xB0;
 const NOTE_DURATION = 300;
 
 
+
+
 const playNote = function (note) {
 
 
-    note = Math.ceil(rangeWidth(note));
-    midiOutput.send([NOTE_ON, note, 0x7f]);
+    // note = Math.ceil(rangeWidth(note));
+    midiOutput.send([NOTE_ON, note, velocity]);
     //midiOutput.send([0xB0,20,note]);
     //midiOutput.send([NOTE_OFF, notes, 0x7f], window.performance.now() + 1000.0);
     //midiOutput.send([CONTROL_CHANGE,thumbsPositionFilter,0x7f]);
 }
 const playNoteOff = function (note) {
    //midiOutput.send([NOTE_ON, notes, 0x7f]);
-    note = Math.ceil(rangeWidth(note));
+   //  note = Math.ceil(rangeWidth(note));
     midiOutput.send([NOTE_OFF, note, 0x7f], window.performance.now() + 1000.0);
 
 }
@@ -74,14 +87,139 @@ navigator.requestMIDIAccess()
     });
 
 
+
+
+function onResults(results) {
+    //setTimeout(console.log('paue'),400000);
+    //sleep(500);
+
+
+    canvasCtx.save();
+   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+
+    DrawDRUMPAD(880,520);
+    if (results.multiHandLandmarks) {
+        for (const landmarks of results.multiHandLandmarks) {
+
+
+
+            RightHandDrum(results.multiHandLandmarks);
+            // if(results.multiHandLandmarks[1])
+            // {
+            //     LeftHand(results.multiHandLandmarks);
+            // }
+
+        }
+        canvasCtx.restore();
+    }
+}
+
+
+
+
+function RightHandDrum(multiHandLandmarks){
+
+
+
+    x_thumb = multiHandLandmarks[0][8].x;
+    y_thumb = multiHandLandmarks[0][8].y;
+
+    x = x_thumb * 1280;
+    y = y_thumb * 720;
+
+    if(y > max_h )
+    {
+        max_h    = y;
+
+       // velocity = (720 - y);
+        //console.log(velocity);
+    }
+
+    if(y  < 480 && played === 1 )
+    {
+        thumb_play= 0;
+        played = 0;
+    }
+    if (y  > 520 && played === 0 ) {
+
+        thumb_play = 1
+    }
+
+    if (thumb_play === 1) {
+        thumb_play = 0;
+        played     = 1;
+
+        velocity = (max_h - 520)* 0.48;
+        console.log(rangeWidth(velocity ));
+        max_h      = 0;
+
+
+        playNoteOff(37);
+        playNote(37,rangeWidth(velocity));
+    }
+
+    drawPointer(x, y);
+
+
+
+
+
+}
+
+
+const hands = new Hands({
+    locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+    }
+});
+hands.setOptions({
+    selfieMode: true,
+    maxNumHands: 2,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+});
+
+hands.onResults(onResults);
+
+
+const camera = new Camera(videoElement, {
+    onFrame: async () => {
+        await hands.send({image: videoElement});
+    },
+    width: 1280,
+    height: 720
+});
+camera.start();
+
+
+function sleep(milliseconds) {
+    const date = Date.now();
+    let currentDate = null;
+    do {
+        currentDate = Date.now();
+    } while (currentDate - date < milliseconds);
+}
 function rangeWidth(input) {
 
-    if ((input * 105.83) > 127) {
-        return 127;
+    if ((input ) > 100) {
+        return 110;
 
-    } else {
-        return input * 105.83
     }
+
+    if ((input ) < 1) {
+        return 2;
+
+    }
+    if ((input ) > 1) {
+        return input;
+
+    }
+
 
 }
 
@@ -96,35 +234,20 @@ function drawPointer(x, y) {
     ctx.stroke();
 }
 
-function onResults(results) {
-    //setTimeout(console.log('paue'),400000);
-    //sleep(500);
+function DrawDRUMPAD(x, y) {
+    var c = document.getElementById("myCanvas");
+    var ctx = c.getContext("2d");
+    ctx.beginPath();
 
-    if (results.multiHandLandmarks.length === 0) {
-        // console.log('no hands');
-        playNoteOff(previous_thumb_play);
-        playNoteOff(previous_middle_play);
-        playNoteOff(previous_POINTER_play);
-        playNoteOff(previous_thumb_play_left);
-    }
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
-    canvasCtx.drawImage(
-        results.image, 0, 0, canvasElement.width, canvasElement.height);
-    if (results.multiHandLandmarks) {
-        for (const landmarks of results.multiHandLandmarks) {
-
-            RightHand(results.multiHandLandmarks);
-            if(results.multiHandLandmarks[1])
-            {
-                LeftHand(results.multiHandLandmarks);
-            }
-
-        }
-        canvasCtx.restore();
-    }
+    ctx.rect(x, y, 400, 200);
+    ctx.lineWidth = "6";
+    ctx.strokeStyle = "red";
+    //ctx.arc(x, y, 50, 0, 2 * Math.PI);
+    //ctx.rect(x, y, 400, 400);
+    ctx.stroke();
 }
+
+
 
 
 function RightHand(multiHandLandmarks)
@@ -224,38 +347,4 @@ function LeftHand(multiHandLandmarks)
 
     drawPointer(last_x_thumb_left * 1280, y_thumb_left * 720);
 
-}
-
-const hands = new Hands({
-    locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-    }
-});
-hands.setOptions({
-    selfieMode: true,
-    maxNumHands: 2,
-    modelComplexity: 1,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5
-});
-
-hands.onResults(onResults);
-
-
-const camera = new Camera(videoElement, {
-    onFrame: async () => {
-        await hands.send({image: videoElement});
-    },
-    width: 1280,
-    height: 720
-});
-camera.start();
-
-
-function sleep(milliseconds) {
-    const date = Date.now();
-    let currentDate = null;
-    do {
-        currentDate = Date.now();
-    } while (currentDate - date < milliseconds);
 }
