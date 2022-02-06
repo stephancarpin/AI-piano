@@ -5,13 +5,14 @@ const canvasCtx = canvasElement.getContext('2d');
 let x, x_thumb,x_thumb_left, x_POINTER, x_middle, x_ring, x_pinky = null;
 let y, y_thumb,y_thumb_left, y_POINTER, y_middle, y_ring, y_pinky = null;
 //buffer
-let margin = 0.05;
+let margin = 0.041666666666667;
 
 let RightHandIndex =0;
 let LeftHandIndex  =1;
 
 
 let last_x_thumb = 0;
+let last_y_thumb = 0;
 let thumb_play = 0;
 let previous_thumb_play,previous_POINTER_play,previous_middle_play = 0;
 
@@ -20,10 +21,12 @@ let last_x_thumb_left = 0;
 let thumb_play_left = 0;
 let previous_thumb_play_left= 0;
 
-let last_x_POINTER = 0;
+let last_x_POINTER=0;
+let last_y_POINTER = 0;
 let POINTER_play = 0;
 
-let last_x_middle = 0;
+let last_x_middle=0;
+let last_y_middle = 0;
 let middle_play =0;
 console.log(last_x_thumb);
 
@@ -76,12 +79,8 @@ navigator.requestMIDIAccess()
 
 function rangeWidth(input) {
 
-    if ((input * 105.83) > 127) {
-        return 127;
-
-    } else {
-        return input * 105.83
-    }
+   //console.log((input/margin) + 60);
+  return Math.round((input/margin) + 60);
 
 }
 
@@ -91,7 +90,7 @@ function drawPointer(x, y) {
     ctx.beginPath();
     ctx.lineWidth = "6";
     ctx.strokeStyle = "red";
-    ctx.arc(x, y, 50, 0, 2 * Math.PI);
+    ctx.arc(x, y, 3, 0, 2 * Math.PI);
     //ctx.rect(x, y, 400, 400);
     ctx.stroke();
 }
@@ -110,8 +109,9 @@ function onResults(results) {
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-    canvasCtx.drawImage(
-        results.image, 0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    drawKeys(canvasElement);
     if (results.multiHandLandmarks) {
         for (const landmarks of results.multiHandLandmarks) {
 
@@ -127,14 +127,14 @@ function onResults(results) {
 }
 
 
-function RightHand(multiHandLandmarks)
-{
+function RightHand(multiHandLandmarks) {
 
     x_thumb = multiHandLandmarks[RightHandIndex][4].x;
     y_thumb = multiHandLandmarks[RightHandIndex][4].y;
 
     if ((x_thumb > (last_x_thumb + margin)) || (x_thumb < (last_x_thumb - margin)) || last_x_thumb === 0) {
         last_x_thumb = x_thumb;
+        last_y_thumb = y_thumb;
 
         thumb_play = 1
     }
@@ -145,6 +145,7 @@ function RightHand(multiHandLandmarks)
 
     if ((x_POINTER > last_x_POINTER + margin) || (x_POINTER < last_x_POINTER - margin) || last_x_POINTER === 0) {
         last_x_POINTER = x_POINTER;
+        last_y_POINTER = y_POINTER;
 
         POINTER_play = 1;
 
@@ -156,6 +157,8 @@ function RightHand(multiHandLandmarks)
 
     if ((x_middle > last_x_middle + margin) || (x_middle < last_x_middle - margin) || last_x_middle === 0) {
         last_x_middle = x_middle;
+        last_y_middle = y_middle;
+        //console.log(last_x_middle);
 
         middle_play = 1;
 
@@ -164,16 +167,16 @@ function RightHand(multiHandLandmarks)
     /**Play Chenged NOtes **/
 
 
-    if (thumb_play === 1) {
-        thumb_play = 0;
-
-        playNoteOff(previous_thumb_play);
-
-        previous_thumb_play = last_x_thumb;
-
-
-        playNote(last_x_thumb);
-    }
+    // if (thumb_play === 1) {
+    //     thumb_play = 0;
+    //
+    //     playNoteOff(previous_thumb_play);
+    //
+    //     previous_thumb_play = last_x_thumb;
+    //
+    //
+    //     playNote(last_x_thumb);
+    // }
     if (POINTER_play === 1) {
 
         POINTER_play = 0;
@@ -181,20 +184,19 @@ function RightHand(multiHandLandmarks)
         previous_POINTER_play = last_x_POINTER;
         playNote(last_x_POINTER);
     }
-    if (middle_play === 1) {
-        previous_middle_play = last_x_middle;
-        playNoteOff(previous_middle_play);
-        middle_play = 0;
-        playNote(last_x_middle);
-    }
+    // if (middle_play === 1) {
+    //     previous_middle_play = last_x_middle;
+    //     playNoteOff(previous_middle_play);
+    //     middle_play = 0;
+    //     playNote(last_x_middle);
+    // }
 
-    drawPointer(last_x_thumb * 1280, y_thumb * 720);
-    drawPointer(last_x_POINTER * 1280, y_POINTER * 720);
-    drawPointer(last_x_middle * 1280, y_middle * 720);
+    drawPointer(last_x_thumb * 1280, last_y_thumb * 720);
+    drawPointer(last_x_POINTER * 1280, last_y_POINTER * 720);
+    drawPointer(last_x_middle * 1280, last_y_middle * 720);
 }
 
-function LeftHand(multiHandLandmarks)
-{
+function LeftHand(multiHandLandmarks) {
 
     x_thumb_left = multiHandLandmarks[LeftHandIndex][4].x;
     y_thumb_left = multiHandLandmarks[LeftHandIndex][4].y;
