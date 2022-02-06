@@ -32,7 +32,7 @@ let thumb_play_left = 0;
 let previous_thumb_play_left= 0;
 
 let last_x_POINTER = 0;
-let POINTER_play = 0;
+let POINTER_play,Pointer_played = 0;
 
 let last_x_middle = 0;
 let middle_play =0;
@@ -61,7 +61,7 @@ const playNote = function (note) {
 const playNoteOff = function (note) {
    //midiOutput.send([NOTE_ON, notes, 0x7f]);
    //  note = Math.ceil(rangeWidth(note));
-    midiOutput.send([NOTE_OFF, note, 0x7f], window.performance.now() + 1000.0);
+    midiOutput.send([NOTE_OFF, note, 0x7f], window.performance.now() + 2000.0);
 
 }
 
@@ -107,7 +107,8 @@ function onResults(results) {
 
 
 
-            RightHandDrum(results.multiHandLandmarks);
+            RightHandkick(results.multiHandLandmarks);
+            RightHandSnare(results.multiHandLandmarks);
             // if(results.multiHandLandmarks[1])
             // {
             //     LeftHand(results.multiHandLandmarks);
@@ -121,12 +122,12 @@ function onResults(results) {
 
 
 
-function RightHandDrum(multiHandLandmarks){
+function RightHandkick(multiHandLandmarks){
 
 
 
-    x_thumb = multiHandLandmarks[0][8].x;
-    y_thumb = multiHandLandmarks[0][8].y;
+    x_thumb = multiHandLandmarks[0][12].x;
+    y_thumb = multiHandLandmarks[0][12].y;
 
     x = x_thumb * 1280;
     y = y_thumb * 720;
@@ -154,12 +155,60 @@ function RightHandDrum(multiHandLandmarks){
         played     = 1;
 
         velocity = (max_h - 520)* 0.48;
-        console.log(rangeWidth(velocity ));
+        //console.log(rangeWidth(Math.ceil(velocity) ));
+        max_h      = 0;
+
+
+        playNoteOff(36);
+        playNote(36,(rangeWidth(Math.ceil(velocity) )));
+    }
+
+    drawPointer(x, y);
+
+
+
+
+
+}
+function RightHandSnare(multiHandLandmarks){
+
+
+
+    x_POINTER = multiHandLandmarks[0][8].x;
+    y_POINTER = multiHandLandmarks[0][8].y;
+
+    x = x_POINTER * 1280;
+    y = y_POINTER * 720;
+
+    if(y > max_h )
+    {
+        max_h    = y;
+
+        // velocity = (720 - y);
+        //console.log(velocity);
+    }
+
+    if(y  < 520 && Pointer_played === 1 )
+    {
+        POINTER_play= 0;
+        Pointer_played = 0;
+    }
+    if (y  > 520 && Pointer_played === 0 ) {
+
+        POINTER_play = 1
+    }
+
+    if (POINTER_play === 1) {
+        POINTER_play = 0;
+        Pointer_played     = 1;
+
+        velocity = (max_h - 520)* 0.48;
+        //console.log(rangeWidth(Math.ceil(velocity) ));
         max_h      = 0;
 
 
         playNoteOff(37);
-        playNote(37,rangeWidth(velocity));
+        playNote(37,(rangeWidth(Math.ceil(velocity) )));
     }
 
     drawPointer(x, y);
@@ -206,18 +255,9 @@ function sleep(milliseconds) {
 }
 function rangeWidth(input) {
 
-    if ((input ) > 100) {
-        return 110;
+    if (input > 0 && input < 120) {
 
-    }
-
-    if ((input ) < 1) {
-        return 2;
-
-    }
-    if ((input ) > 1) {
-        return input;
-
+        return input
     }
 
 
