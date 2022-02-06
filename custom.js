@@ -6,6 +6,7 @@ let x, x_thumb,x_thumb_left, x_POINTER, x_middle, x_ring, x_pinky = null;
 let y, y_thumb,y_thumb_left, y_POINTER, y_middle, y_ring, y_pinky = null;
 //buffer
 let margin = 0.041666666666667;
+let valuecc=0;
 
 let RightHandIndex =0;
 let LeftHandIndex  =1;
@@ -42,7 +43,7 @@ const NOTE_DURATION = 300;
 const playNote = function (note) {
 
 
-    note = Math.ceil(rangeWidth(note));
+    note = Math.ceil(rangeWidthNote(note));
     midiOutput.send([NOTE_ON, note, 0x7f]);
     //midiOutput.send([0xB0,20,note]);
     //midiOutput.send([NOTE_OFF, notes, 0x7f], window.performance.now() + 1000.0);
@@ -50,7 +51,7 @@ const playNote = function (note) {
 }
 const playNoteOff = function (note) {
    //midiOutput.send([NOTE_ON, notes, 0x7f]);
-    note = Math.ceil(rangeWidth(note));
+    note = Math.ceil(rangeWidthNote(note));
     midiOutput.send([NOTE_OFF, note, 0x7f], window.performance.now() + 1000.0);
 
 }
@@ -58,9 +59,19 @@ const playNoteOff = function (note) {
 const playCC = function (position) {
 
 
-    position = Math.ceil(rangeWidth(position));
+    position = Math.ceil(rangeHeightCC(position));
 
     midiOutput.send([0xB0,20,position]);
+    //midiOutput.send([NOTE_OFF, notes, 0x7f], window.performance.now() + 1000.0);
+    //midiOutput.send([CONTROL_CHANGE,thumbsPositionFilter,0x7f]);
+}
+
+const playCC_z = function (position_z) {
+
+   console.log(position_z);
+
+
+    midiOutput.send([0xB0,27,position_z]);
     //midiOutput.send([NOTE_OFF, notes, 0x7f], window.performance.now() + 1000.0);
     //midiOutput.send([CONTROL_CHANGE,thumbsPositionFilter,0x7f]);
 }
@@ -77,10 +88,31 @@ navigator.requestMIDIAccess()
     });
 
 
-function rangeWidth(input) {
+function rangeWidthNote(input) {
 
    //console.log((input/margin) + 60);
   return Math.round((input/margin) + 60);
+
+}
+function rangeHeightCC(input)
+{
+    valuecc =  Math.round((input/ 0.007874015748031));
+    if(valuecc > 0 &&  valuecc < 127 )
+    {
+        return valuecc;
+    }
+
+
+}
+function rangeZ_CC(input)
+{
+    valuecc =  Math.round((Math.abs(input)/ 0.001338582677165));
+    if(valuecc > 0 &&  valuecc < 127 )
+    {
+
+        return (valuecc);
+    }
+
 
 }
 
@@ -183,7 +215,9 @@ function RightHand(multiHandLandmarks) {
         playNoteOff(previous_POINTER_play);
         previous_POINTER_play = last_x_POINTER;
         playNote(last_x_POINTER);
+
     }
+    playCC(y_POINTER);
     // if (middle_play === 1) {
     //     previous_middle_play = last_x_middle;
     //     playNoteOff(previous_middle_play);
@@ -191,40 +225,32 @@ function RightHand(multiHandLandmarks) {
     //     playNote(last_x_middle);
     // }
 
-    drawPointer(last_x_thumb * 1280, last_y_thumb * 720);
-    drawPointer(last_x_POINTER * 1280, last_y_POINTER * 720);
-    drawPointer(last_x_middle * 1280, last_y_middle * 720);
+    drawPointer(last_x_thumb * 1280, y_thumb * 720);
+    drawPointer(last_x_POINTER * 1280, y_POINTER * 720);
+    drawPointer(last_x_middle * 1280, y_middle * 720);
 }
 
 function LeftHand(multiHandLandmarks) {
 
-    x_thumb_left = multiHandLandmarks[LeftHandIndex][4].x;
-    y_thumb_left = multiHandLandmarks[LeftHandIndex][4].y;
-
-    if ((x_thumb_left > (last_x_thumb_left + margin)) || (x_thumb_left < (last_x_thumb_left - margin)) || last_x_thumb_left === 0) {
-        last_x_thumb_left = x_thumb_left;
-
-        thumb_play_left = 1
-    }
+     x_thumb_left = multiHandLandmarks[LeftHandIndex][8].x;
+     y_thumb_left = multiHandLandmarks[LeftHandIndex][8].y;
+    //
+    // if ((x_thumb_left > (last_x_thumb_left + margin)) || (x_thumb_left < (last_x_thumb_left - margin)) || last_x_thumb_left === 0) {
+    //     last_x_thumb_left = x_thumb_left;
+    //
+    //     thumb_play_left = 1
+    // }
 
 
 
     /**Play Chenged NOtes **/
+    playCC_z(rangeZ_CC(multiHandLandmarks[LeftHandIndex][8].z));
 
 
-    if (thumb_play_left === 1) {
-        thumb_play_left = 0;
-
-        playNoteOff(previous_thumb_play_left);
-
-        previous_thumb_play_left = last_x_thumb_left;
 
 
-        playNote(last_x_thumb_left);
-    }
 
-
-    drawPointer(last_x_thumb_left * 1280, y_thumb_left * 720);
+    drawPointer(x_thumb_left * 1280, y_thumb_left * 720);
 
 }
 
